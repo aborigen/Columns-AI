@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "game-background",
+      "description": "Abstract fruit textures",
+      "imageUrl": "https://picsum.photos/seed/pulpdrop/1920/1080",
+      "imageHint": "fruit texture"
+    }
+  ]
 }
