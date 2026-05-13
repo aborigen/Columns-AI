@@ -32,12 +32,11 @@ export function MatterScene({
   const engineRef = useRef(Matter.Engine.create());
   const renderRef = useRef<Matter.Render | null>(null);
   const runnerRef = useRef<Matter.Runner | null>(null);
-  const stagingFruitRef = useRef<Matter.Body | null>(null);
-  const gameOverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isDropping, setIsDropping] = useState(false);
   const [mousePos, setMousePos] = useState({ x: ARENA_WIDTH / 2 });
+  const gameOverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize Scene
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -56,14 +55,12 @@ export function MatterScene({
     });
     renderRef.current = render;
 
-    // Arena walls
     const ground = Matter.Bodies.rectangle(ARENA_WIDTH / 2, ARENA_HEIGHT + 25, ARENA_WIDTH, 50, { isStatic: true, render: { visible: false } });
     const leftWall = Matter.Bodies.rectangle(-25, ARENA_HEIGHT / 2, 50, ARENA_HEIGHT, { isStatic: true, render: { visible: false } });
     const rightWall = Matter.Bodies.rectangle(ARENA_WIDTH + 25, ARENA_HEIGHT / 2, 50, ARENA_HEIGHT, { isStatic: true, render: { visible: false } });
     
     Matter.Composite.add(engine.world, [ground, leftWall, rightWall]);
 
-    // Collision Events
     Matter.Events.on(engine, 'collisionStart', (event) => {
       event.pairs.forEach((pair) => {
         const bodyA = pair.bodyA;
@@ -101,30 +98,40 @@ export function MatterScene({
     Matter.Runner.run(runner, engine);
     Matter.Render.run(render);
 
-    // Update parent with game state for AI
     const updateLoop = () => {
       if (isGameOver) return;
-      const bodies = Matter.Composite.allBodies(engine.world)
-        .filter(b => b.label !== 'Rectangle Body' && b.id !== stagingFruitRef.current?.id)
-        .map(b => ({
-          id: b.id.toString(),
-          type: b.label,
-          x: b.position.x,
-          y: b.position.y,
-          radius: (b as any).circleRadius
-        }));
-      onBodiesUpdate(bodies);
+      const allBodies = Matter.Composite.allBodies(engine.world);
+      const fruitBodies = allBodies.filter(b => b.label !== 'Rectangle Body');
       
-      // Game Over Check
-      const overflowing = bodies.some(b => b.y - b.radius < GAME_OVER_LINE_Y);
-      if (overflowing && !gameOverTimerRef.current) {
-        gameOverTimerRef.current = setTimeout(() => {
-          setIsGameOver(true);
-          onGameOver();
-        }, 3000);
-      } else if (!overflowing && gameOverTimerRef.current) {
-        clearTimeout(gameOverTimerRef.current);
-        gameOverTimerRef.current = null;
+      const bodiesData = fruitBodies.map(b => ({
+        id: b.id.toString(),
+        type: b.label,
+        x: b.position.x,
+        y: b.position.y,
+        radius: (b as any).circleRadius
+      }));
+      
+      onBodiesUpdate(bodiesData);
+      
+      const overflowing = fruitBodies.some(b => {
+        const radius = (b as any).circleRadius || 0;
+        const isAboveLine = b.position.y - radius < GAME_OVER_LINE_Y;
+        const isSettled = Math.abs(b.velocity.y) < 0.2;
+        return isAboveLine && isSettled;
+      });
+
+      if (overflowing) {
+        if (!gameOverTimerRef.current) {
+          gameOverTimerRef.current = setTimeout(() => {
+            setIsGameOver(true);
+            onGameOver();
+          }, 3000);
+        }
+      } else {
+        if (gameOverTimerRef.current) {
+          clearTimeout(gameOverTimerRef.current);
+          gameOverTimerRef.current = null;
+        }
       }
 
       requestAnimationFrame(updateLoop);
@@ -139,7 +146,7 @@ export function MatterScene({
       cancelAnimationFrame(animId);
       if (gameOverTimerRef.current) clearTimeout(gameOverTimerRef.current);
     };
-  }, []);
+  }, [onGameOver, onBodiesUpdate, isGameOver, onScoreUpdate]);
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (isGameOver) return;
@@ -147,10 +154,12 @@ export function MatterScene({
     if (!rect) return;
     
     let clientX;
-    if ('touches' in e) {
+    if ('touches' in e && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
+    } else if ('clientX' in e) {
+      clientX = (e as React.MouseEvent).clientX;
     } else {
-      clientX = e.clientX;
+      return;
     }
 
     const x = Math.max(
@@ -161,8 +170,9 @@ export function MatterScene({
   };
 
   const handleClick = useCallback(() => {
-    if (isGameOver || stagingFruitRef.current) return;
+    if (isGameOver || isDropping) return;
 
+    setIsDropping(true);
     const fruitDef = FRUIT_TIERS[nextFruitIndex];
     const dropX = mousePos.x;
     
@@ -179,17 +189,20 @@ export function MatterScene({
 
     Matter.Composite.add(engineRef.current.world, fruit);
     onFruitDropped();
-  }, [nextFruitIndex, mousePos, isGameOver, onFruitDropped]);
+
+    setTimeout(() => {
+      setIsDropping(false);
+    }, 600);
+  }, [nextFruitIndex, mousePos, isGameOver, isDropping, onFruitDropped]);
 
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full h-full cursor-none overflow-hidden"
+      className="relative w-full h-full cursor-none overflow-hidden touch-none"
       onMouseMove={handleMouseMove}
       onTouchMove={handleMouseMove}
       onClick={handleClick}
     >
-      {/* Background Decor */}
       <div className="absolute inset-0 bg-[#1A0C0E] overflow-hidden">
          <div className="absolute inset-0 opacity-10" style={{ 
             backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
@@ -197,9 +210,8 @@ export function MatterScene({
          }} />
       </div>
 
-      {/* Danger Zone Line */}
       <div 
-        className="absolute w-full border-t-2 border-dashed border-primary/40 z-10" 
+        className="absolute w-full border-t-2 border-dashed border-primary/40 z-10 pointer-events-none" 
         style={{ top: GAME_OVER_LINE_Y }}
       >
         <div className="absolute right-2 -top-6 text-[10px] font-bold text-primary tracking-widest bg-background/80 px-2 py-0.5 rounded">
@@ -207,7 +219,6 @@ export function MatterScene({
         </div>
       </div>
 
-      {/* Suggested Path */}
       {suggestedX !== null && !isGameOver && (
         <div 
           className="absolute h-full w-[2px] bg-secondary/30 z-0 pointer-events-none"
@@ -217,12 +228,12 @@ export function MatterScene({
         </div>
       )}
 
-      {/* Drop Staging Ghost */}
       {!isGameOver && (
         <div 
-          className="absolute top-[80px] pointer-events-none z-20 flex items-center justify-center transition-all duration-75 ease-out"
+          className={`absolute top-[${DROP_STAGING_HEIGHT}px] pointer-events-none z-20 flex items-center justify-center transition-opacity duration-200 ${isDropping ? 'opacity-20' : 'opacity-100'}`}
           style={{ 
             left: mousePos.x, 
+            top: DROP_STAGING_HEIGHT,
             transform: 'translate(-50%, -50%)',
             width: FRUIT_TIERS[nextFruitIndex].radius * 2,
             height: FRUIT_TIERS[nextFruitIndex].radius * 2,
@@ -237,7 +248,6 @@ export function MatterScene({
         </div>
       )}
 
-      {/* Game Over Overlay */}
       {isGameOver && (
         <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-500">
           <h2 className="text-4xl font-black text-primary mb-2 italic">ARENA FULL!</h2>
