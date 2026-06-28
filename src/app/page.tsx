@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MatterScene } from '@/components/game/MatterScene';
 import { AIAdvisor } from '@/components/game/AIAdvisor';
 import { EvolutionGuide } from '@/components/game/EvolutionGuide';
@@ -29,15 +29,29 @@ export default function PulpDropPage() {
     }
   }, [score, highScore]);
 
-  const handleFruitDropped = () => {
+  const handleFruitDropped = useCallback(() => {
     // New next fruit is always within the first 5 tiers for gameplay balance
     setNextFruitIndex(Math.floor(Math.random() * 5));
     setSuggestedX(null);
-  };
+  }, []);
 
-  const handleScoreUpdate = (points: number) => {
+  const handleScoreUpdate = useCallback((points: number) => {
     setScore(prev => prev + points);
-  };
+  }, []);
+
+  const handleGameOver = useCallback(() => {
+    // Game over logic handled inside MatterScene via state, 
+    // but this callback is here for potential analytics or global state
+  }, []);
+
+  const handleBodiesUpdate = useCallback((bodies: any[]) => {
+    setCurrentBodies(bodies);
+  }, []);
+
+  const arenaDropRange = useMemo(() => ({
+    min: FRUIT_TIERS[nextFruitIndex].radius,
+    max: ARENA_WIDTH - FRUIT_TIERS[nextFruitIndex].radius
+  }), [nextFruitIndex]);
 
   return (
     <div className="min-h-svh bg-background flex items-center justify-center p-4 lg:p-8">
@@ -81,9 +95,9 @@ export default function PulpDropPage() {
               nextFruitIndex={nextFruitIndex}
               onFruitDropped={handleFruitDropped}
               onScoreUpdate={handleScoreUpdate}
-              onGameOver={() => {}}
+              onGameOver={handleGameOver}
               suggestedX={suggestedX}
-              onBodiesUpdate={setCurrentBodies}
+              onBodiesUpdate={handleBodiesUpdate}
             />
           </div>
 
@@ -134,10 +148,7 @@ export default function PulpDropPage() {
               currentFruits: currentBodies,
               nextFruitType: FRUIT_TIERS[nextFruitIndex].type,
               arenaWidth: ARENA_WIDTH,
-              availableDropXRange: {
-                min: FRUIT_TIERS[nextFruitIndex].radius,
-                max: ARENA_WIDTH - FRUIT_TIERS[nextFruitIndex].radius
-              }
+              availableDropXRange: arenaDropRange
             }}
           />
 

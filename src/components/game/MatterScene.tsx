@@ -35,8 +35,14 @@ export function MatterScene({
   const [mousePos, setMousePos] = useState({ x: ARENA_WIDTH / 2 });
   const gameOverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use refs for callbacks to prevent the main engine useEffect from re-running
+  const callbacksRef = useRef({ onScoreUpdate, onGameOver, onBodiesUpdate, onFruitDropped });
   useEffect(() => {
-    if (!containerRef.current) return;
+    callbacksRef.current = { onScoreUpdate, onGameOver, onBodiesUpdate, onFruitDropped };
+  });
+
+  useEffect(() => {
+    if (!containerRef.current || isGameOver) return;
 
     // 1. Setup Engine & World
     const engine = Matter.Engine.create();
@@ -80,7 +86,6 @@ export function MatterScene({
         const bodyA = pair.bodyA;
         const bodyB = pair.bodyB;
 
-        // Ensure we are comparing two fruits of the same type
         if (bodyA.label === bodyB.label && bodyA.label !== 'boundary' && bodyA.label !== 'Circle Body') {
           const tierIdx = FRUIT_TIERS.findIndex(f => f.type === bodyA.label);
           if (tierIdx !== -1 && tierIdx < FRUIT_TIERS.length - 1) {
@@ -88,7 +93,7 @@ export function MatterScene({
             const midX = (bodyA.position.x + bodyB.position.x) / 2;
             const midY = (bodyA.position.y + bodyB.position.y) / 2;
 
-            onScoreUpdate(nextTier.score);
+            callbacksRef.current.onScoreUpdate(nextTier.score);
             
             Matter.Composite.remove(engine.world, [bodyA, bodyB]);
             
@@ -101,7 +106,7 @@ export function MatterScene({
               },
               restitution: 0.3,
               friction: 0.1,
-              plugin: { createdAt: Date.now() } // Mark creation time
+              plugin: { createdAt: Date.now() }
             });
             Matter.Composite.add(engine.world, newFruit);
           }
@@ -111,8 +116,6 @@ export function MatterScene({
 
     // 5. State Sync & Game Over Check
     Matter.Events.on(engine, 'afterUpdate', () => {
-      if (isGameOver) return;
-
       const allBodies = Matter.Composite.allBodies(engine.world);
       const fruitBodies = allBodies.filter(b => b.label !== 'boundary');
       
@@ -124,17 +127,16 @@ export function MatterScene({
         radius: (b as any).circleRadius
       }));
       
-      onBodiesUpdate(bodiesData);
+      callbacksRef.current.onBodiesUpdate(bodiesData);
       
       const now = Date.now();
       const overflowing = fruitBodies.some(b => {
         const radius = (b as any).circleRadius || 0;
         const isAboveLine = b.position.y - radius < GAME_OVER_LINE_Y;
-        const isSettled = Math.abs(b.velocity.y) < 0.1 && Math.abs(b.velocity.x) < 0.1;
+        const isSettled = Math.abs(b.velocity.y) < 0.2 && Math.abs(b.velocity.x) < 0.2;
         
-        // Ignore very recently created fruits (like the one just dropped)
         const createdAt = (b.plugin as any)?.createdAt || 0;
-        const isOldEnough = now - createdAt > 1000;
+        const isOldEnough = now - createdAt > 1200;
 
         return isAboveLine && isSettled && isOldEnough;
       });
@@ -143,14 +145,12 @@ export function MatterScene({
         if (!gameOverTimerRef.current) {
           gameOverTimerRef.current = setTimeout(() => {
             setIsGameOver(true);
-            onGameOver();
-          }, 2000);
+            callbacksRef.current.onGameOver();
+          }, 1500);
         }
-      } else {
-        if (gameOverTimerRef.current) {
-          clearTimeout(gameOverTimerRef.current);
-          gameOverTimerRef.current = null;
-        }
+      } else if (gameOverTimerRef.current) {
+        clearTimeout(gameOverTimerRef.current);
+        gameOverTimerRef.current = null;
       }
     });
 
@@ -164,10 +164,10 @@ export function MatterScene({
       Matter.Render.stop(render);
       Matter.Runner.stop(runner);
       Matter.Engine.clear(engine);
-      render.canvas.remove();
+      if (render.canvas) render.canvas.remove();
       if (gameOverTimerRef.current) clearTimeout(gameOverTimerRef.current);
     };
-  }, [onGameOver, onBodiesUpdate, isGameOver, onScoreUpdate]);
+  }, [isGameOver]);
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (isGameOver) return;
@@ -206,17 +206,16 @@ export function MatterScene({
       },
       restitution: 0.2,
       friction: 0.1,
-      plugin: { createdAt: Date.now() } // Mark creation time
+      plugin: { createdAt: Date.now() }
     });
 
     Matter.Composite.add(engineRef.current.world, fruit);
-    onFruitDropped();
+    callbacksRef.current.onFruitDropped();
 
-    // Drop Cooldown
     setTimeout(() => {
       setIsDropping(false);
-    }, 500);
-  }, [nextFruitIndex, mousePos.x, isGameOver, isDropping, onFruitDropped]);
+    }, 600);
+  }, [nextFruitIndex, mousePos.x, isGameOver, isDropping]);
 
   return (
     <div 
