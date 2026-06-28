@@ -6,9 +6,17 @@ import { MatterScene } from '@/components/game/MatterScene';
 import { AIAdvisor } from '@/components/game/AIAdvisor';
 import { EvolutionGuide } from '@/components/game/EvolutionGuide';
 import { FRUIT_TIERS, ARENA_WIDTH, ARENA_HEIGHT } from '@/lib/game-constants';
-import { Trophy, RefreshCcw, LayoutDashboard, BrainCircuit } from 'lucide-react';
+import { Trophy, RefreshCcw, LayoutDashboard, BrainCircuit, HelpCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function PulpDropGame() {
   const [score, setScore] = useState(0);
@@ -68,7 +76,41 @@ export default function PulpDropGame() {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10">
+                  <HelpCircle className="w-6 h-6 text-muted-foreground" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="glass border-white/10 sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black italic">HOW TO PLAY</DialogTitle>
+                  <DialogDescription className="text-muted-foreground">
+                    Master the art of the perfect fruit drop.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-6 py-4">
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">1</div>
+                    <p className="text-sm leading-relaxed">Move your <span className="text-foreground font-bold">cursor or finger</span> to position the fruit above the arena.</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">2</div>
+                    <p className="text-sm leading-relaxed"><span className="text-foreground font-bold">Click or tap</span> to drop the fruit. Use physics to your advantage!</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">3</div>
+                    <p className="text-sm leading-relaxed">Combine <span className="text-foreground font-bold">two identical fruits</span> to merge them into a larger, higher-tier fruit.</p>
+                  </div>
+                  <div className="flex gap-4 border-t border-white/5 pt-4">
+                    <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary shrink-0">!</div>
+                    <p className="text-sm leading-relaxed italic text-muted-foreground">Don't let the fruits pile up past the <span className="text-primary font-bold">Stability Threshold</span> line, or the session will end.</p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <div className="glass px-6 py-3 rounded-2xl border-white/5 flex items-center gap-3">
               <Trophy className="w-5 h-5 text-secondary" />
               <div>
