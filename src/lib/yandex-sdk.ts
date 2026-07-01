@@ -23,6 +23,12 @@ export interface YandexSDK {
       ready: () => void;
     };
   };
+  environment: {
+    i18n: {
+      lang: string;
+      tld: string;
+    };
+  };
 }
 
 let yandexInstance: YandexSDK | null = null;
@@ -57,6 +63,14 @@ export async function initYandexSDK(): Promise<YandexSDK | null> {
  */
 export function getYandexSDK(): YandexSDK | null {
   return yandexInstance;
+}
+
+/**
+ * Gets the environment language from Yandex SDK.
+ */
+export function getEnvironmentLanguage(): string {
+  const sdk = getYandexSDK();
+  return sdk?.environment?.i18n?.lang || 'en';
 }
 
 /**

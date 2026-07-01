@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -6,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, Target, BrainCircuit } from 'lucide-react';
 import { strategicColumnSuggestion, type StrategicColumnSuggestionInput } from '@/ai/flows/strategic-column-suggestion';
 import { useToast } from '@/hooks/use-toast';
+import { t } from '@/lib/translations';
 
 interface AIAdvisorProps {
   gameState: StrategicColumnSuggestionInput;
   onSuggestionReceived: (col: number, cycle: number) => void;
+  lang?: string;
 }
 
-export function AIAdvisor({ gameState, onSuggestionReceived }: AIAdvisorProps) {
+export function AIAdvisor({ gameState, onSuggestionReceived, lang = 'en' }: AIAdvisorProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const { toast } = useToast();
@@ -29,8 +30,8 @@ export function AIAdvisor({ gameState, onSuggestionReceived }: AIAdvisorProps) {
       onSuggestionReceived(result.suggestedColumn, result.cycleCount);
     } catch (error) {
       toast({
-        title: "Strategic Uplink Failed",
-        description: "The AI strategist is currently recalibrating.",
+        title: t('ai_failed_title', lang),
+        description: t('ai_failed_desc', lang),
         variant: "destructive"
       });
     } finally {
@@ -46,7 +47,7 @@ export function AIAdvisor({ gameState, onSuggestionReceived }: AIAdvisorProps) {
              <Sparkles className="w-5 h-5 text-white" />
            </div>
            <h3 className="text-sm font-black text-primary uppercase tracking-widest">
-             AI ADVISOR
+             {t('ai_advisor', lang)}
            </h3>
         </div>
         <Button 
@@ -57,7 +58,7 @@ export function AIAdvisor({ gameState, onSuggestionReceived }: AIAdvisorProps) {
           disabled={isAnalyzing || gameState.currentStack.length === 0}
         >
           {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <BrainCircuit className="w-4 h-4 mr-2" />}
-          {isAnalyzing ? "ANALYZING" : "GET HINT"}
+          {isAnalyzing ? t('analyzing', lang) : t('get_hint', lang)}
         </Button>
       </div>
       
@@ -66,13 +67,13 @@ export function AIAdvisor({ gameState, onSuggestionReceived }: AIAdvisorProps) {
           <div className="text-xs text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-top-2 duration-500">
             <div className="flex gap-2 items-center text-secondary font-black mb-2 tracking-widest">
                <Target className="w-3 h-3" />
-               <span>STRATEGY IDENTIFIED</span>
+               <span>{t('strategy_identified', lang)}</span>
             </div>
             {suggestion}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground italic">
-            Wait for a tricky pattern to engage the Strategic Lens.
+            {t('wait_ai', lang)}
           </p>
         )}
       </div>

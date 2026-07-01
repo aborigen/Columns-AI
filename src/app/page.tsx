@@ -8,7 +8,8 @@ import { Trophy, RefreshCcw, BrainCircuit, HelpCircle, Gamepad2 } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
-import { initYandexSDK, syncHighScoreToYandex, fetchHighScoreFromYandex } from '@/lib/yandex-sdk';
+import { initYandexSDK, syncHighScoreToYandex, fetchHighScoreFromYandex, getEnvironmentLanguage } from '@/lib/yandex-sdk';
+import { t } from '@/lib/translations';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ export default function ColumnsPage() {
   const [highScore, setHighScore] = useState(0);
   const [gameKey, setGameKey] = useState(0);
   const [isYandexReady, setIsYandexReady] = useState(false);
+  const [lang, setLang] = useState('en');
   const [currentGameState, setCurrentGameState] = useState<{grid: (number|null)[][], stack: number[]}>({
     grid: [],
     stack: []
@@ -39,6 +41,7 @@ export default function ColumnsPage() {
       const sdk = await initYandexSDK();
       if (sdk) {
         setIsYandexReady(true);
+        setLang(getEnvironmentLanguage());
         const yandexHigh = await fetchHighScoreFromYandex();
         if (yandexHigh !== null && yandexHigh > (parseInt(saved || '0'))) {
           setHighScore(yandexHigh);
@@ -74,14 +77,14 @@ export default function ColumnsPage() {
 
   const handleGameOver = useCallback(() => {
     toast({ 
-      title: "Grid Overflow!", 
-      description: "The columns have reached the ceiling.", 
+      title: t('game_over_title', lang), 
+      description: t('game_over_desc', lang), 
       variant: "destructive" 
     });
     
     // Defer reset to avoid render-phase state updates
     setTimeout(() => handleReset(), 0);
-  }, [handleReset]);
+  }, [handleReset, lang]);
 
   const handleStateUpdate = useCallback((grid: (number|null)[][], stack: number[]) => {
     setCurrentGameState({ grid, stack });
@@ -118,20 +121,20 @@ export default function ColumnsPage() {
               </DialogTrigger>
               <DialogContent className="glass sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-black italic">TACTICAL GUIDE</DialogTitle>
+                  <DialogTitle className="text-2xl font-black italic">{t('tactical_guide', lang)}</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col space-y-4 py-4">
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">←→</div>
-                    <p className="text-sm">Use <span className="text-foreground font-bold">Arrow Keys</span> or On-Screen buttons to move.</p>
+                    <p className="text-sm">{t('guide_move', lang)}</p>
                   </div>
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">↑</div>
-                    <p className="text-sm">Press <span className="text-foreground font-bold">Up or Space</span> (or the Center button) to cycle gems.</p>
+                    <p className="text-sm">{t('guide_cycle', lang)}</p>
                   </div>
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">3x</div>
-                    <p className="text-sm">Match 3+ gems <span className="text-foreground font-bold">horizontally, vertically, or diagonally</span>.</p>
+                    <p className="text-sm">{t('guide_match', lang)}</p>
                   </div>
                 </div>
               </DialogContent>
@@ -140,14 +143,14 @@ export default function ColumnsPage() {
             <div className="glass px-3 py-1.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl flex items-center space-x-2 md:space-x-3">
               <Trophy className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
               <div>
-                <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none mb-0.5 md:mb-1">High</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none mb-0.5 md:mb-1">{t('high_score', lang)}</p>
                 <p className="text-sm md:text-xl font-black">{highScore.toLocaleString()}</p>
               </div>
             </div>
             
             <div className="glass px-3 py-1.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl bg-primary/5 border-primary/20 flex items-center">
               <div>
-                <p className="text-[8px] md:text-[10px] font-bold text-primary uppercase tracking-wider leading-none mb-0.5 md:mb-1">Score</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-primary uppercase tracking-wider leading-none mb-0.5 md:mb-1">{t('score', lang)}</p>
                 <p className="text-lg md:text-2xl font-black">{score.toLocaleString()}</p>
               </div>
             </div>
@@ -162,7 +165,7 @@ export default function ColumnsPage() {
           <aside className="hidden md:flex flex-col space-y-6 w-full lg:w-auto">
             <div className="glass p-6 rounded-3xl">
                <h3 className="text-sm font-bold text-muted-foreground mb-6 uppercase tracking-widest">
-                 Gem Rarity
+                 {t('gem_rarity', lang)}
                </h3>
                <div className="grid grid-cols-3 md:flex md:flex-col gap-4">
                  {GEM_TYPES.map(gem => (
@@ -184,6 +187,7 @@ export default function ColumnsPage() {
               onGameOver={handleGameOver}
               onStateUpdate={handleStateUpdate}
               suggestedMove={suggestedMove}
+              lang={lang}
             />
           </main>
 
@@ -196,15 +200,16 @@ export default function ColumnsPage() {
                 gridWidth: GRID_WIDTH,
                 gridHeight: GRID_HEIGHT
               }}
+              lang={lang}
             />
 
             <div className="glass p-5 md:p-6 rounded-3xl bg-secondary/5 border-secondary/10 hidden sm:block">
               <div className="flex items-center space-x-2 mb-3">
                 <BrainCircuit className="w-4 h-4 text-secondary" />
-                <span className="text-xs font-bold text-secondary uppercase tracking-widest">Strategy Pro-Tip</span>
+                <span className="text-xs font-bold text-secondary uppercase tracking-widest">{t('strategy_pro_tip', lang)}</span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Diagonals are often overlooked. Try to stack gems to create multi-directional cascades for massive score multipliers.
+                {t('pro_tip_content', lang)}
               </p>
             </div>
           </aside>

@@ -5,15 +5,17 @@ import { GRID_WIDTH, GRID_HEIGHT, GEM_TYPES, TICK_RATE_INITIAL, TICK_RATE_MIN, T
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, ChevronDown, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/translations';
 
 interface ColumnsGameProps {
   onScoreUpdate: (score: number) => void;
   onGameOver: () => void;
   onStateUpdate: (grid: (number | null)[][], currentStack: number[]) => void;
   suggestedMove: { col: number; cycle: number } | null;
+  lang?: string;
 }
 
-export function ColumnsGame({ onScoreUpdate, onGameOver, onStateUpdate, suggestedMove }: ColumnsGameProps) {
+export function ColumnsGame({ onScoreUpdate, onGameOver, onStateUpdate, suggestedMove, lang = 'en' }: ColumnsGameProps) {
   const [grid, setGrid] = useState<(number | null)[][]>(
     Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(null))
   );
@@ -283,7 +285,7 @@ export function ColumnsGame({ onScoreUpdate, onGameOver, onStateUpdate, suggeste
 
         <div className="flex flex-row md:flex-col gap-4 w-full md:w-auto justify-center">
           <div className="glass p-3 md:p-4 rounded-2xl border-white/10 flex flex-col items-center">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 md:mb-3">Next</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 md:mb-3">{t('next', lang)}</p>
             <div className="flex flex-row md:flex-col gap-1">
               {nextStack.map((id, i) => (
                 <div key={i} className="w-8 h-8 md:w-10 md:h-10 glass rounded-lg flex items-center justify-center text-lg md:text-xl shadow-inner border border-white/5">
