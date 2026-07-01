@@ -43,6 +43,11 @@ export default function ColumnsPage() {
         if (yandexHigh !== null && yandexHigh > (parseInt(saved || '0'))) {
           setHighScore(yandexHigh);
         }
+
+        // Call LoadingAPI.ready() when the user can start playing
+        if (sdk.features.LoadingAPI) {
+          sdk.features.LoadingAPI.ready();
+        }
       }
     };
     init();

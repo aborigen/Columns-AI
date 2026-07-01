@@ -18,6 +18,11 @@ export interface YandexSDK {
     }) => void;
   };
   getStorage: () => Promise<any>;
+  features: {
+    LoadingAPI?: {
+      ready: () => void;
+    };
+  };
 }
 
 let yandexInstance: YandexSDK | null = null;
