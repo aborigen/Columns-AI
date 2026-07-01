@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,6 +8,7 @@ import { Trophy, RefreshCcw, BrainCircuit, HelpCircle, Gamepad2 } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
+import { initYandexSDK, syncHighScoreToYandex, fetchHighScoreFromYandex } from '@/lib/yandex-sdk';
 import {
   Dialog,
   DialogContent,
@@ -21,23 +21,45 @@ export default function ColumnsPage() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [gameKey, setGameKey] = useState(0);
+  const [isYandexReady, setIsYandexReady] = useState(false);
   const [currentGameState, setCurrentGameState] = useState<{grid: (number|null)[][], stack: number[]}>({
     grid: [],
     stack: []
   });
   const [suggestedMove, setSuggestedMove] = useState<{col: number, cycle: number} | null>(null);
 
+  // Initialize High Score and Yandex SDK
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('columns_high_score') : null;
-    if (saved) setHighScore(parseInt(saved));
+    const init = async () => {
+      // Local fallback
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('columns_high_score') : null;
+      if (saved) setHighScore(parseInt(saved));
+
+      // Yandex SDK Init
+      const sdk = await initYandexSDK();
+      if (sdk) {
+        setIsYandexReady(true);
+        const yandexHigh = await fetchHighScoreFromYandex();
+        if (yandexHigh !== null && yandexHigh > (parseInt(saved || '0'))) {
+          setHighScore(yandexHigh);
+        }
+      }
+    };
+    init();
   }, []);
 
+  // Update high score locally and in cloud
   useEffect(() => {
     if (score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('columns_high_score', score.toString());
+      const newHigh = score;
+      setHighScore(newHigh);
+      localStorage.setItem('columns_high_score', newHigh.toString());
+      
+      if (isYandexReady) {
+        syncHighScoreToYandex(newHigh);
+      }
     }
-  }, [score, highScore]);
+  }, [score, highScore, isYandexReady]);
 
   const handleReset = useCallback(() => {
     setScore(0);
@@ -51,7 +73,9 @@ export default function ColumnsPage() {
       description: "The columns have reached the ceiling.", 
       variant: "destructive" 
     });
-    handleReset();
+    
+    // Defer reset to avoid render-phase state updates
+    setTimeout(() => handleReset(), 0);
   }, [handleReset]);
 
   const handleStateUpdate = useCallback((grid: (number|null)[][], stack: number[]) => {
@@ -130,7 +154,6 @@ export default function ColumnsPage() {
         </header>
 
         <div className="flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] gap-6 md:gap-12 items-center lg:items-start justify-center">
-          {/* Legend - Hidden on small mobile, visible on tablet/desktop */}
           <aside className="hidden md:flex flex-col space-y-6 w-full lg:w-auto">
             <div className="glass p-6 rounded-3xl">
                <h3 className="text-sm font-bold text-muted-foreground mb-6 uppercase tracking-widest">
@@ -149,7 +172,6 @@ export default function ColumnsPage() {
             </div>
           </aside>
 
-          {/* Game Canvas */}
           <main className="flex justify-center w-full">
             <ColumnsGame 
               key={gameKey}
@@ -160,7 +182,6 @@ export default function ColumnsPage() {
             />
           </main>
 
-          {/* AI Advisor Panel */}
           <aside className="flex flex-col space-y-6 w-full max-w-sm">
             <AIAdvisor 
               onSuggestionReceived={handleSuggestionReceived}

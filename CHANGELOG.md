@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2024-05-25
+### Added
+- **Yandex Games SDK**: Integrated Yandex Games SDK for high-score synchronization with cloud storage.
+- **Cloud Sync**: High scores now automatically sync between Yandex Cloud and LocalStorage.
+
 ## [1.2.0] - 2024-05-24
 ### Added
 - **Mobile Support**: Full responsive design for smartphones.
